@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Planificaciones</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Añadimos una clase max-width especial en el CSS si quieres que la tabla sea más ancha -->
+    <div class="container" style="max-width: 900px;"> 
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1 style="margin: 0;">Historial de Órdenes</h1>
+            <a href="/" class="btn-link" style="margin: 0;">+ Nueva Orden</a>
+        </div>
+
+        <% if (historial.length === 0) { %>
+            <p class="no-data">No hay planificaciones almacenadas en la base de datos.</p>
+        <% } else { %>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha / Hora</th>
+                            <th>Producto</th>
+                            <th>Bandejas (Neto)</th>
+                            <th>Materia Bruta</th>
+                            <th>Cajas</th>
+                            <th>Rend.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% historial.forEach(item => { %>
+                            <tr class="<%= item.rendimientoTotal < 80 ? 'row-danger' : 'row-success' %>">
+                                <td>
+                                    <small><%= item.fechaFormateada %></small><br>
+                                    <strong><%= item.horaFormateada %></strong>
+                                </td>
+                                <td><strong><%= item.producto %></strong></td>
+                                <td><%= item.bandejas %> (<%= item.kgNetos %> kg)</td>
+                                <td><strong><%= item.kgBrutos %> kg</strong></td>
+                                <td>📦 <%= item.cajasNecesarias %> u.</td>
+                                <td><strong><%= item.rendimientoTotal %>%</strong></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    </div>
+</body>
+</html>

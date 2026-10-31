@@ -1,0 +1,39 @@
+<<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultado de la Planificación</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Orden de Compra/Producción</h1>
+        <h2>Producto: <%= producto %></h2>
+
+        <div class="result-badge alert-success" style="margin-bottom: 1.5rem; text-align: center;">
+    <p style="margin: 0; font-size: 0.9rem; text-transform: uppercase; font-weight: bold;">Materia Prima Necesaria</p>
+    <h2 style="margin: 0.5rem 0; font-size: 2.2rem;"><%= kgBrutos %> Kg</h2>
+    <h3 style="margin: 0; color: #166534; font-size: 1.4rem;">📦 Requieres: <%= cajasNecesarias %> Cajas</h3>
+    <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #555;">(Calculado en base a cajas estándar de <%= pesoCaja %> kg)</p>
+</div>
+
+
+        <h3>Desglose de Pérdidas Esperadas:</h3>
+        <ul>
+            <li><span>En Fileteo/Corte:</span> <strong>- <%= perdidaFileteo %> kg</strong></li>
+            <li><span>En Embandejado:</span> <strong>- <%= perdidaEmbandejado %> kg</strong></li>
+            <li><span>Por Invalidez/Calidad:</span> <strong>- <%= perdidaInvalidez %> kg</strong></li>
+            <li><span>Total Desperdicio:</span> <strong style="color: var(--danger);"><%= totalPerdido %> kg</strong></li>
+        </ul>
+
+        <div class="result-badge" style="background-color: var(--bg); border: 1px solid var(--border);">
+            <p style="margin:0;">Rendimiento Total del Proceso: <strong><%= rendimientoTotal %>%</strong></p>
+        </div>
+
+        <a href="/" class="btn-link">← Planificar otra orden</a>
+    </div>
+</body>
+</html>
+
+</html>

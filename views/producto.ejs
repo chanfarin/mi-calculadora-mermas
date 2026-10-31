@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Crear Producto</title>
+</head>
+<body>
+    <h1>Registrar Nuevo Producto</h1>
+    
+    <form action="/productos" method="POST">
+        <!-- Datos generales del producto -->
+        <div>
+            <label>Nombre del Producto:</label>
+            <input type="text" name="nombre" placeholder="Ej: Pechuga de Pollo" required>
+        </div>
+        <div>
+            <label>Categoría:</label>
+            <input type="text" name="categoria" placeholder="Ej: Carnicería">
+        </div>
+
+        <h2>Formatos de Procesamiento</h2>
+
+        <!-- Variante 1: Filetes Embandejado -->
+        <fieldset>
+            <legend>Variante 1: Filetes</legend>
+            <input type="hidden" name="variantes[0][presentacion]" value="filetes_embandejado">
+            
+            <label>SKU:</label>
+            <input type="text" name="variantes[0][sku]" placeholder="AV-PECH-FIL-500G" required>
+            
+            <label>Precio (€):</label>
+            <input type="number" step="0.01" name="variantes[0][precio]" required>
+            
+            <label>Stock Inicial:</label>
+            <input type="number" name="variantes[0][stock]" value="0">
+        </fieldset>
+
+        <!-- Variante 2: Entera Embandejada -->
+        <fieldset>
+            <legend>Variante 2: Entera</legend>
+            <input type="hidden" name="variantes[1][presentacion]" value="entera_embandejada">
+            
+            <label>SKU:</label>
+            <input type="text" name="variantes[1][sku]" placeholder="AV-PECH-ENT-1KG" required>
+            
+            <label>Precio (€):</label>
+            <input type="number" step="0.01" name="variantes[1][precio]" required>
+            
+            <label>Stock Inicial:</label>
+            <input type="number" name="variantes[1][stock]" value="0">
+        </fieldset>
+
+        <button type="submit">Guardar Producto con Variantes</button>
+    </form>
+</body>
+</html>
