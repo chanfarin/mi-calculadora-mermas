@@ -3,58 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificador de Producción</title>
+    <title>Planificador Automatizado</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Planificar Pedido (Cálculo Inverso)</h1>
+<div class="contenedor">
+    <nav style="background: #1e293b; padding: 1rem; margin-bottom: 2rem; border-radius: 8px; display: flex; justify-content: space-around;">
+        <a href="/" style="color: #38bdf8; text-decoration: none; font-weight: bold;">📊 Planificar Pedido</a>
+        <a href="/nuevo/producto" style="color: white; text-decoration: none; font-weight: bold;">🐓 Maestro de Productos</a>
+        <a href="/historial" style="color: white; text-decoration: none; font-weight: bold;">📋 Historial de Órdenes</a>
+    </nav>
+
+    <div class="container" style="max-width: 550px;">
+        <h1>Planificar Orden de Producción</h1>
+        
         <form action="/calcular" method="POST">
+            <!-- 1. SELECTOR DEL PRODUCTO MAESTRO -->
             <div class="form-group">
-                <label for="producto">Nombre del Producto / Línea</label>
-                <input type="text" id="producto" name="producto" placeholder="Ej. Filete de Salmón" required>
+                <label for="productoId">Selecciona el Producto:</label>
+                <select id="productoId" name="productoId" style="width:100%; padding:0.75rem; border-radius:6px; font-size:1rem;" required>
+                    <option value="">-- Selecciona un producto del catálogo --</option>
+                    <% productosCatalogo.forEach(p => { %>
+                        <option value="<%= p._id %>" data-variantes='<%= JSON.stringify(p.variantes) %>'>
+                            <%= p.nombre %> (<%= p.tipoBandeja %>)
+                        </option>
+                    <% }) %>
+                </select>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <!-- 2. SELECTOR DINÁMICO DE FORMATO / SKU (Controlado por JS) -->
+            <div class="form-group" id="grupo-formato" style="display: none;">
+                <label for="formatoSeleccionado">Formato / Presentación:</label>
+                <select id="formatoSeleccionado" name="formatoSeleccionado" style="width:100%; padding:0.75rem; border-radius:6px; font-size:1rem;" required>
+                    <!-- Se llenará automáticamente via JS -->
+                </select>
+            </div>
+
+            <!-- 3. DATOS DEL PEDIDO -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group">
-                    <label>Nº Bandejas Pedidas</label>
-                    <input type="number" name="numeroBandejas" placeholder="100" required>
+                    <label> Nº Bandejas Pedidas:</label>
+                    <input type="number" name="numBandejasPedidas" placeholder="Ej: 1000" min="1" required>
                 </div>
                 <div class="form-group">
-                    <label>Kg por Bandeja</label>
-                    <input type="number" step="0.001" name="kilosPorBandeja" placeholder="0.500" required>
+                    <label> Bandejas Por Caja:</label>
+                    <input type="number" name="bandejasPorCaja" placeholder="Ej: 150" min="1" required>
                 </div>
+
                 <div class="form-group">
-                    <label>Peso Estándar de Caja (Kg)</label>
-                    <input type="number" step="0.01" name="pesoCajaStandard" placeholder="10.000" required>
+                    <label>Peso Caja Estándar (kg):</label>
+                    <input type="number" step="0.01" name="pesoCajaStandard" placeholder="Ej: 10.0" min="0.1" required>
                 </div>
             </div>
 
-            <h3>Porcentajes de Merma Estimados (%)</h3>
-            
-            <div class="form-group">
-                <label>1. Merma por Corte / Fileteo (%)</label>
-                <input type="number" step="0.1" name="mermaFileteo" placeholder="ej. 15" required>
-            </div>
+            <!-- Parámetros fijos ocultos que enviará el select secundario -->
+            <input type="hidden" id="tipoProceso" name="tipoProceso" value="simple">
 
-            <div class="form-group">
-                <label>2. Merma por Embandejado (%)</label>
-                <input type="number" step="0.1" name="mermaEmbandejado" placeholder="3" required>
-            </div>
-
-            <div class="form-group">
-                <label>3. Desecho por Invalidez / Calidad (%)</label>
-                <input type="number" step="0.1" name="mermaInvalidez" placeholder="2" required>
-            </div>
-
-            <button type="submit">Calcular Materia Prima Requerida</button>
+            <button type="submit" style="margin-top: 1rem;">Efectuar Cálculo Automatizado</button>
         </form>
-
-        <!-- Añade este enlace justo debajo del botón o en la cabecera de views/index.ejs -->
-<div style="text-align: center; margin-top: 1.5rem;">
-    <a href="/historial" class="btn-link">📋 Ver Historial Completo de Órdenes</a>
+    </div>
 </div>
 
- </div>
+    <!-- 🧠 SCRIPT INTERNO PARA PASAR LAS VARIANTES DE ATLAS AL DESPLEGABLE -->
+    <script>
+        document.getElementById('productoId').addEventListener('change', function() {
+            const selectFormato = document.getElementById('formatoSeleccionado');
+            const grupoFormato = document.getElementById('grupo-formato');
+            
+            // Limpiar opciones anteriores
+            selectFormato.innerHTML = '<option value="">-- Selecciona el formato --</option>';
+            
+            const selectedOption = this.options[this.selectedIndex];
+            if (!selectedOption.value) {
+                grupoFormato.style.display = 'none';
+                return;
+            }
+
+            // Extraer las variantes inyectadas en el atributo data-
+            const variantes = JSON.parse(selectedOption.getAttribute('data-variantes') || '[]');
+            
+            variantes.forEach((v, vIdx) => {
+                // Si la variante tiene subvariantes (como Ajillo -> bipack)
+                if (v.subVariantes && v.subVariantes.length > 0) {
+                    v.subVariantes.forEach((sv, svIdx) => {
+                        const opt = document.createElement('option');
+                        // Codificamos los datos en el value para recuperarlos en el backend
+                        opt.value = `sub_variante|${vIdx}|${svIdx}`;
+                        opt.textContent = `${v.nombreVariante.toUpperCase()} - ${sv.presentacion.toUpperCase()}-${sv.tipoBandeja} (Peso: ${sv.pesoEstandarBandeja}kg / Merma: ${sv.mermaCorteEstimada}%)`;
+                        selectFormato.appendChild(opt);
+                    });
+                } else {
+                    // Variante simple (como pechuga_fileteada o neutra)
+                    const opt = document.createElement('option');
+                    opt.value = `variante_simple|${vIdx}`;
+                    const bandeja = v.tipoBandeja ||'Sin bandeja';
+                    opt.textContent = `${v.nombreVariante.toUpperCase()}- ${bandeja} (Peso: ${v.pesoEstandarBandeja}kg / Merma: ${v.mermaCorteEstimada}%)`;
+                    selectFormato.appendChild(opt);
+                }
+            });
+
+            grupoFormato.style.display = 'block';
+        });
+    </script>
 </body>
 </html>

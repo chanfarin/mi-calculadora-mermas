@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import connectDB from "./connection/db.js";
 import Planificacion from "./models/producto.js";
 import rutasProducto from "./routes/rutasProducto.js";
+import Productos from "./models/productos.js";
 
 // Conectar a la base de datos MongoDB
 connectDB();
@@ -30,10 +31,16 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 //Ruta principla formulario
-app.use("/producto", rutasProducto);
+app.use(rutasProducto);
 
 app.get("/", async (req, res) => {
-  res.render("index");
+  try {
+    const productosMaestro = await Productos.find().sort({ nombre: 1 });
+    res.render("index", { productosCatalogo: productosMaestro });
+  } catch (error) {
+    console.error("Error al cargar el maestro:", error);
+    res.render("index", { productosCatalogo: [] });
+  }
 });
 
 app.get("/historial", async (req, res) => {
@@ -62,73 +69,112 @@ app.get("/historial", async (req, res) => {
 app.post("/calcular", async (req, res) => {
   try {
     const {
-      producto,
-      numeroBandejas,
-      kilosPorBandeja,
+      productoId,
+      formatoSeleccionado,
+      numBandejasPedidas,
+      bandejasPorCaja,
       pesoCajaStandard,
-      mermaEmbandejado,
-      mermaInvalidez,
-      mermaFileteo,
     } = req.body;
-    const limpiarNumero = (valor) => {
-      if (!valor) return 0;
-      return parseFloat(valor.toString().replace(",", ".")) || 0;
-    };
+    console.log("🚀 Datos recibidos del formulario:", req.body);
 
-    const bandejas = parseInt(numeroBandejas) || 0;
-    const kgBandeja = limpiarNumero(kilosPorBandeja);
-    const pesoCaja = limpiarNumero(pesoCajaStandard);
-    const mFileteo = limpiarNumero(mermaFileteo) / 100;
-    const mEmbandejado = limpiarNumero(mermaEmbandejado) / 100;
-    const mInvalidez = limpiarNumero(mermaInvalidez) / 100;
+    // 1. Buscar el producto maestro en Atlas
+    const productoMaestro = await Productos.findById(productoId);
+    if (!productoMaestro) {
+      throw new Error(
+        "El producto seleccionado no existe en el catálogo maestro.",
+      );
+    }
 
-    // Cálculos matemáticos en cascada
+    // 2. Extraer peso y merma según el formato elegido en el desplegable
+    const [tipoFormato, vIdx, svIdx] = formatoSeleccionado.split("|");
+    let pesoEstandarBandeja = 0;
+    let mermaCorteEstimada = 0;
+    let etiquetaFormato = "";
+    let bandejaUsada = "";
+
+    if (tipoFormato === "variante_simple") {
+      const varSeleccionada = productoMaestro.variantes[parseInt(vIdx, 10)];
+      pesoEstandarBandeja = varSeleccionada.pesoEstandarBandeja;
+      mermaCorteEstimada = varSeleccionada.mermaCorteEstimada;
+      etiquetaFormato = varSeleccionada.nombreVariante;
+      bandejaUsada = varSeleccionada.tipoBandeja;
+    } else if (tipoFormato === "sub_variante") {
+      const varPrincipal = productoMaestro.variantes[parseInt(vIdx, 10)];
+      const subVarSeleccionada = varPrincipal.subVariantes[parseInt(svIdx, 10)];
+      pesoEstandarBandeja = subVarSeleccionada.pesoEstandarBandeja;
+      mermaCorteEstimada = subVarSeleccionada.mermaCorteEstimada;
+      etiquetaFormato = `${varPrincipal.nombreVariante} (${subVarSeleccionada.presentacion})`;
+      bandejaUsada = subVarSeleccionada.tipoBandeja;
+    }
+
+    // 3. Variables numéricas de entrada
+    const bandejas = parseInt(numBandejasPedidas, 10) || 0;
+    const capCajaTerminada = parseInt(bandejasPorCaja, 10) || 1;
+    const kgBandeja = Number(pesoEstandarBandeja) || 0;
+    const pesoCaja =
+      parseFloat(pesoCajaStandard.toString().replace(",", ".")) || 10;
+
+    // 4. Cálculo de cajas de producto terminado
+    const cajasProductoTerminado = Math.ceil(bandejas / capCajaTerminada);
+
+    // 5. Fórmulas en cascada para materia prima
+    const mFileteo = (Number(mermaCorteEstimada) || 0) / 100;
+    const mEmbandejado = 0.03; // 3% fijo
+    const mInvalidez = 0.02; // 2% fijo
+
     const kgNetos = bandejas * kgBandeja;
-    const kgPostEmbandejado = kgNetos / (1 - mInvalidez || 1);
-    const kgPostFileteo = kgPostEmbandejado / (1 - mEmbandejado || 1);
-    const kgBrutosNecesarios = kgPostFileteo / (1 - mFileteo || 1);
+    const kgPostEmbandejado = kgNetos / (1 - mInvalidez);
+    const kgPostFileteo = kgPostEmbandejado / (1 - mEmbandejado);
+    const kgBrutosNecesarios = kgPostFileteo / (1 - mFileteo);
     const cajasNecesarias = Math.ceil(kgBrutosNecesarios / pesoCaja);
 
-    //Desglose de mermas
-    const perdidoInvalidez = kgPostEmbandejado - kgNetos;
+    const perdidaInvalidez = kgPostEmbandejado - kgNetos;
     const perdidoEmbandejado = kgPostFileteo - kgPostEmbandejado;
     const perdidoFileteo = kgBrutosNecesarios - kgPostFileteo;
     const totalMateriaPerdida = kgBrutosNecesarios - kgNetos;
     const rendimientoTotal =
       kgBrutosNecesarios > 0
-        ? ((kgNetos / kgBrutosNecesarios) * 100).toFixed(2)
+        ? ((kgNetos / kgBrutosNecesarios) * 100).toFixed(1)
         : 0;
 
-    // CREAR el documento coincidiendo exactamente con el modelo de mongodb
+    const nombreCompletoProducto = `${productoMaestro.nombre} [${etiquetaFormato.toUpperCase()} - ${bandejaUsada}]`;
+
+    // 6. Guardar en MongoDB Atlas
     const nuevaPlanificacion = new Planificacion({
-      producto,
-      bandejas,
-      kgBandeja,
-      pesoCaja,
-      kgNetos: kgNetos.toFixed(2),
-      kgBrutos: kgBrutosNecesarios.toFixed(2),
-      cajasNecesarias,
-      perdidaFileteo: perdidoFileteo.toFixed(2),
-      perdidaEmbandejado: perdidoEmbandejado.toFixed(2),
-      perdidaInvalidez: perdidoInvalidez.toFixed(2),
-      totalPerdido: totalMateriaPerdida.toFixed(2),
-      rendimientoTotal,
+      producto: nombreCompletoProducto,
+      bandejas: bandejas,
+      bandejasPorCaja: capCajaTerminada,
+      cajasProductoTerminado: cajasProductoTerminado,
+      kgBandeja: kgBandeja,
+      pesoCaja: pesoCaja,
+      kgNetos: Number(kgNetos.toFixed(2)),
+      kgBrutos: Number(kgBrutosNecesarios.toFixed(2)),
+      cajasNecesarias: cajasNecesarias,
+      perdidaFileteo: Number(perdidoFileteo.toFixed(2)),
+      perdidaEmbandejado: Number(perdidoEmbandejado.toFixed(2)),
+      perdidaInvalidez: Number(perdidaInvalidez.toFixed(2)),
+      totalPerdido: Number(totalMateriaPerdida.toFixed(2)),
+      rendimientoTotal: Number(rendimientoTotal),
     });
 
-    // GUARDAR permanentemente  en mongoDB Atlas
-    await nuevaPlanificacion.save();
+    const docGuardado = await nuevaPlanificacion.save();
+    console.log("🚀 Registro guardado en MongoDB Atlas:", docGuardado);
 
-    // Mandamos a la pantalla de resultados la info recién guardada
+    // 7. Renderizar la vista de resultados
     res.render("resultado", {
-      ...nuevaPlanificacion._doc,
-      fecha: nuevaPlanificacion.fecha.toLocaleTimeString("es-Es", {
+      ...docGuardado._doc,
+      fecha: docGuardado.fecha.toLocaleTimeString("es-ES", {
         hour: "2-digit",
         minute: "2-digit",
       }),
     });
   } catch (error) {
-    console.error("Error al guardar la planificación:", error);
-    res.status(500).send("Error al procesar y almacenar el cálculo.");
+    console.error("Error al procesar el cálculo:", error);
+    res
+      .status(500)
+      .send(
+        `<h1>Error al calcular</h1><p>${error.message}</p><a href="/">Volver</a>`,
+      );
   }
 });
 

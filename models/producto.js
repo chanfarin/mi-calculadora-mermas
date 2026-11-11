@@ -14,6 +14,8 @@ const PlanificacionSchema = new mongoose.Schema(
     perdidaInvalidez: { type: Number, required: true },
     totalPerdido: { type: Number, required: true },
     rendimientoTotal: { type: Number, required: true },
+    bandejasPorCaja: { type: Number, required: true },
+    cajasProductoTerminado: { type: Number, required: true },
     fecha: { type: Date, default: Date.now },
   },
   {

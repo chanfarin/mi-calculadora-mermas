@@ -1,55 +1,273 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <title>Crear Producto</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maestro de Productos Dinámico</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .variante-box { border-left: 4px solid var(--primary); padding: 1.5rem; margin-bottom: 1.5rem; background: #ffffff; border-radius: 8px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .subvariante-box { border-left: 3px dashed #10b981; padding: 1.25rem; margin-top: 1rem; background: #f8fafc; border-radius: 6px; border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .btn-secondary { background-color: #64748b; color: white; padding: 0.5rem 1rem; font-size: 0.85rem; border: none; border-radius: 4px; cursor: pointer; margin-top: 0.5rem; font-weight: 600; }
+        .btn-secondary:hover { background-color: #475569; }
+        .btn-danger-sm { background-color: #ef4444; color: white; padding: 0.25rem 0.5rem; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-danger-sm:hover { background-color: #dc2626; }
+    </style>
 </head>
 <body>
-    <h1>Registrar Nuevo Producto</h1>
+<div class="contenedor">
+    <nav style="background: #1e293b; padding: 1rem; margin-bottom: 2rem; border-radius: 8px; display: flex; justify-content: space-around;">
+        <a href="/" style="color: white; text-decoration: none; font-weight: bold;">📊 Planificar Pedido</a>
+        <a href="/nuevo/producto" style="color: #38bdf8; text-decoration: none; font-weight: bold;">🐓 Maestro de Productos</a>
+        <a href="/historial" style="color: white; text-decoration: none; font-weight: bold;">📋 Historial de Órdenes</a>
+    </nav>
+
+    <div class="main-layout" style="max-width: 1350px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 2rem;">
+        
+        <!-- COLUMNA 1: FORMULARIO DE REGISTRO DINÁMICO -->
+        <div class="card">
+            <h2>Registrar Producto Personalizado</h2>
+            <form action="/nuevo/producto" method="POST">
+                <div class="form-group">
+                    <label>Nombre del Producto / Ave:</label>
+                    <input type="text" name="nombre" placeholder="Ej: Contramuslo Pavo" required>
+                </div>
+               
+                
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: 1rem;">
+                    <h3>Variantes del Producto</h3>
+                    <button type="button" class="btn-secondary" id="btn-add-variante">+ Añadir Variante Principal</button>
+                </div>
+
+                <!-- Contenedor donde JavaScript inyectará las variantes -->
+                <div id="variantes-container"></div>
+
+                <button type="submit" style="margin-top: 1.5rem; background-color: #1e293b;">Guardar en Catálogo Maestro</button>
+            </form>
+        </div>
+
+        <!-- COLUMNA 2: LISTADO ACTUAL DESDE ATLAS -->
+        <div class="card">
+           <h2>Catálogo Maestro Flexible</h2>
+
+<% if (typeof productos === 'undefined' || !productos || productos.length === 0) { %>
+    <p class="no-data">No hay productos registrados en el maestro.</p>
+<% } else { %>
+    <div class="table-responsive">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                    <th style="padding: 1rem; width: 35%;">Producto / Acciones</th>
+                    <th style="padding: 1rem; width: 65%;">Formatos, Embalajes y Mermas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% productos.forEach(p => { %>
+                    <tr style="border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+                        <td style="padding: 1rem;">
+                            <span style="font-size: 1.1rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 0.5rem;">
+                                <%= p.nombre %>
+                            </span>
+                            <div style="display: flex; gap: 8px; margin-top: 0.75rem;">
+                                <a href="/producto/editar/<%= p._id %>" 
+                                   style="background-color: #cbd5e1; color: #1e293b; padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none; border-radius: 4px; font-weight: 600;">
+                                   ✏️ Editar
+                                </a>
+                                <a href="/producto/eliminar/<%= p._id %>" 
+                                   style="background-color: #fef2f2; color: #ef4444; padding: 0.35rem 0.6rem; font-size: 0.75rem; text-decoration: none; border-radius: 4px; font-weight: 600; border: 1px solid #fee2e2;" 
+                                   onclick="return confirm('¿Seguro que deseas eliminar definitivamente este producto del catálogo?')">
+                                   🗑️ Eliminar
+                                </a>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <% if (p.variantes && p.variantes.length > 0) { %>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <% p.variantes.forEach(v => { %>
+                                        <div style="background-color: #f8fafc; padding: 0.75rem; border-radius: 6px; border: 1px solid #f1f5f9;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                                <span style="font-weight: 600; color: var(--primary); text-transform: uppercase; font-size: 0.85rem;">
+                                                    <%= v.nombreVariante %>
+                                                </span>
+                                                <% if (!v.subVariantes || v.subVariantes.length === 0) { %>
+                                                    <span style="font-size: 0.8rem; background: #e0f2fe; color: #0369a1; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: 500;">
+                                                        📦 <%= v.tipoBandeja %>
+                                                    </span>
+                                                <% } %>
+                                            </div>
+
+                                            <% if (v.subVariantes && v.subVariantes.length > 0) { %>
+                                                <div style="margin-top: 0.5rem; padding-left: 0.75rem; border-left: 2px dashed #10b981; display: flex; flex-direction: column; gap: 6px;">
+                                                    <% v.subVariantes.forEach(sv => { %>
+                                                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; background: #ffffff; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid #f1f5f9;">
+                                                            <span style="text-transform: capitalize; font-weight: 500; color: #334155;">
+                                                                ↳ <%= sv.presentacion %> 
+                                                                <small style="color: #64748b; font-weight: normal; display: block; font-size: 0.75rem;">
+                                                                    Envase: <%= sv.tipoBandeja %>
+                                                                </small>
+                                                            </span>
+                                                            <span style="text-align: right; color: #0f172a;">
+                                                                <strong><%= sv.pesoEstandarBandeja %> kg</strong> 
+                                                                <span style="color: #64748b; font-size: 0.8rem; margin-left: 4px;">(Merma: <%= sv.mermaCorteEstimada %>%)</span>
+                                                            </span>
+                                                        </div>
+                                                    <% }) %>
+                                                </div>
+                                            <% } else { %>
+                                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-top: 0.25rem;">
+                                                    <span style="color: #64748b;">Formato estándar directo</span>
+                                                    <span style="color: #0f172a;">
+                                                        <strong><%= v.pesoEstandarBandeja %> kg</strong> 
+                                                        <span style="color: #64748b; font-size: 0.8rem; margin-left: 4px;">(Merma: <%= v.mermaCorteEstimada %>%)</span>
+                                                    </span>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } else { %>
+                                <span style="color: #94a3b8; font-size: 0.85rem; font-style: italic;">Sin formatos configurados</span>
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+<% } %>
+
+        </div>
+    </div>
+
+
+
+    <!-- Script de Inyección Inteligente Corregido -->
+    <script>
+        let varianteCount = 0;
+
+        document.getElementById('btn-add-variante').addEventListener('click',
+     function agregarVariantePrincipal() {
+    const container = document.getElementById('variantes-container');
+    const vIndex = parseInt(varianteCount, 10);
     
-    <form action="/productos" method="POST">
-        <!-- Datos generales del producto -->
-        <div>
-            <label>Nombre del Producto:</label>
-            <input type="text" name="nombre" placeholder="Ej: Pechuga de Pollo" required>
-        </div>
-        <div>
-            <label>Categoría:</label>
-            <input type="text" name="categoria" placeholder="Ej: Carnicería">
-        </div>
+    const varianteHtml = 
+        '<div class="variante-box" id="variante-' + vIndex + '">' +
+            '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">' +
+                '<h4 style="margin:0;">Variante Principal</h4>' +
+                '<button type="button" class="btn-danger-sm" onclick="document.getElementById(\'variante-' + vIndex + '\').remove()">Eliminar</button>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label>Nombre de la Variante (Ej: neutra, ajillo):</label>' +
+                '<input type="text" name="variantes[' + vIndex + '][nombreVariante]" placeholder="Ej. ajillo" required>' +
+            '</div>' +
+            
+            // CAMPOS SIMPLES (Incluye su propio tipoBandeja)
+            '<div id="valores-simples-' + vIndex + '">' +
+                '<div class="form-group">' +
+                    '<label>Tipo de Bandeja Específica:</label>' +
+                    '<input type="text" name="variantes[' + vIndex + '][tipoBandeja]" placeholder="Ej: Bandeja P2" id="bandeja-' + vIndex + '" required>' +
+                '</div>' +
+                '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">' +
+                    '<div class="form-group">' +
+                        '<label>Peso Estándar (kg):</label>' +
+                        '<input type="number" step="0.001" name="variantes[' + vIndex + '][pesoEstandarBandeja]" placeholder="0.000" id="peso-' + vIndex + '" required>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                        '<label>Merma Corte (%):</label>' +
+                        '<input type="number" step="0.1" name="variantes[' + vIndex + '][mermaCorteEstimada]" placeholder="0.0" id="merma-' + vIndex + '" required>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            
+            '<div id="subvariantes-container-' + vIndex + '"></div>' +
+            '<button type="button" class="btn-secondary" style="background:#10b981; margin-top:1rem;" onclick="addSubVariante(' + vIndex + ')">+ Añadir Sub-variante (Ej: bipack / normal)</button>' +
+        '</div>';
+    
+    container.insertAdjacentHTML('beforeend', varianteHtml);
+    varianteCount++;
+})
 
-        <h2>Formatos de Procesamiento</h2>
+           function addSubVariante(vIndex) {
+    const vNum = parseInt(vIndex, 10);
+    const simpleDiv = document.getElementById('valores-simples-' + vNum);
+    const subContainer = document.getElementById('subvariantes-container-' + vNum);
+    
+    // Contamos los elementos hijos actuales para tener un índice correlativo real
+    const svNum = parseInt(subContainer.children.length, 10);
 
-        <!-- Variante 1: Filetes Embandejado -->
-        <fieldset>
-            <legend>Variante 1: Filetes</legend>
-            <input type="hidden" name="variantes[0][presentacion]" value="filetes_embandejado">
-            
-            <label>SKU:</label>
-            <input type="text" name="variantes[0][sku]" placeholder="AV-PECH-FIL-500G" required>
-            
-            <label>Precio (€):</label>
-            <input type="number" step="0.01" name="variantes[0][precio]" required>
-            
-            <label>Stock Inicial:</label>
-            <input type="number" name="variantes[0][stock]" value="0">
-        </fieldset>
+    // Desactivar de forma segura los atributos requeridos de la variante principal
+    if (simpleDiv && simpleDiv.style.display !== 'none') {
+        simpleDiv.style.display = 'none';
+        
+        const bandejaInput = document.getElementById('bandeja-' + vNum);
+        const pesoInput = document.getElementById('peso-' + vNum);
+        const mermaInput = document.getElementById('merma-' + vNum);
+        
+        // Les quitamos la obligación obligatoria en HTML para que el navegador deje pasar los datos
+        if (bandejaInput) bandejaInput.removeAttribute('required');
+        if (pesoInput) pesoInput.removeAttribute('required');
+        if (mermaInput) mermaInput.removeAttribute('required');
+    }
 
-        <!-- Variante 2: Entera Embandejada -->
-        <fieldset>
-            <legend>Variante 2: Entera</legend>
-            <input type="hidden" name="variantes[1][presentacion]" value="entera_embandejada">
-            
-            <label>SKU:</label>
-            <input type="text" name="variantes[1][sku]" placeholder="AV-PECH-ENT-1KG" required>
-            
-            <label>Precio (€):</label>
-            <input type="number" step="0.01" name="variantes[1][precio]" required>
-            
-            <label>Stock Inicial:</label>
-            <input type="number" name="variantes[1][stock]" value="0">
-        </fieldset>
+    // Estructuramos la subvariante usando la concatenación de variables numéricas puras vNum y svNum
+    const subHtml = 
+        '<div class="subvariante-box" id="subvariante-' + vNum + '-' + svNum + '">' +
+            '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">' +
+                '<h5 style="margin:0; color:#10b981;">Sub-variante / Formato Detallado</h5>' +
+                '<button type="button" class="btn-danger-sm" style="padding:0.1rem 0.3rem; font-size:0.75rem;" onclick="removerSubvariante(' + vNum + ', ' + svNum + ')">X</button>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label>Presentación de Sub-variante (Ej: bipack, normal):</label>' +
+                '<input type="text" name="variantes[' + vNum + '][subVariantes][' + svNum + '][presentacion]" placeholder="Ej: bipack" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label>Tipo de Bandeja Sub-variante:</label>' +
+                '<input type="text" name="variantes[' + vNum + '][subVariantes][' + svNum + '][tipoBandeja]" placeholder="Ej: Bandeja Bipack" required>' +
+            '</div>' +
+            '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">' +
+                '<div class="form-group">' +
+                    '<label>Peso Estándar (kg):</label>' +
+                    '<input type="number" step="0.001" name="variantes[' + vNum + '][subVariantes][' + svNum + '][pesoEstandarBandeja]" placeholder="Ej: 0.800" required>' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label>Merma Corte (%):</label>' +
+                    '<input type="number" step="0.1" name="variantes[' + vNum + '][subVariantes][' + svNum + '][mermaCorteEstimada]" placeholder="Ej: 11.0" required>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+        
+    subContainer.insertAdjacentHTML('beforeend', subHtml);
+}
 
-        <button type="submit">Guardar Producto con Variantes</button>
-    </form>
+function removerSubvariante(vIndex, svIndex) {
+    const vNum = parseInt(vIndex, 10);
+    const svNum = parseInt(svIndex, 10);
+    
+    const elemento = document.getElementById('subvariante-' + vNum + '-' + svNum);
+    if (elemento) elemento.remove();
+    
+    const subContainer = document.getElementById('subvariantes-container-' + vNum);
+    
+    // Si ya no quedan subvariantes, volvemos a mostrar y exigir los recuadros de la variante principal
+    if (subContainer && subContainer.children.length === 0) {
+        const simpleDiv = document.getElementById('valores-simples-' + vNum);
+        if (simpleDiv) {
+            simpleDiv.style.display = 'block';
+            
+            const bandejaInput = document.getElementById('bandeja-' + vNum);
+            const pesoInput = document.getElementById('peso-' + vNum);
+            const mermaInput = document.getElementById('merma-' + vNum);
+            
+            if (bandejaInput) bandejaInput.setAttribute('required', 'true');
+            if (pesoInput) pesoInput.setAttribute('required', 'true');
+            if (mermaInput) mermaInput.setAttribute('required', 'true');
+        }
+    }
+}
+
+        
+    </script>
 </body>
+
 </html>
